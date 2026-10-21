@@ -1110,6 +1110,7 @@ button.more:hover{background:var(--bg-alt);border-color:var(--blue)}
           <input type="search" id="q" placeholder="搜索球员姓名 / 英文名…">
           <select id="f-ctry"><option value="">全部国家/地区</option></select>
           <select id="f-cont"><option value="">全部大洲</option></select>
+          <select id="f-tier"><option value="">全部档次</option><option>超一流</option><option>强一流</option><option>普通一流</option><option>弱一流</option><option>二流</option><option>三流</option></select>
           <select id="f-sort">
             <option value="rank">按排名</option>
             <option value="points">按积分</option>
@@ -1931,7 +1932,7 @@ function tableRowsHtml(rows) {
       <td>${ch}</td>
       <td><div class="pl">
         <img src="${esc(p.avatar)}" alt="" onerror="this.style.visibility='hidden'">
-        <div><div class="cn">${esc(p.name_cn)}</div><div class="en">${esc(p.name_en)}</div></div></div></td>
+        <div><div class="cn">${esc(p.name_cn)}</div><div class="en">${esc(p.name_en)}</div></div>${tierChip(p.name_en || p.name_cn)}</div></td>
       <td><div class="fl">${(p.flag_d || p.flag) ? `<img src="${esc(p.flag_d || p.flag)}" alt="" onerror="this.style.visibility='hidden'">` : ''}${esc(cname(p))}</div></td>
       <td class="pts">${fmt(p.points)}</td>
       <td>${p.events ?? '—'}</td>
@@ -1975,11 +1976,11 @@ function renderTable(keepCap) {
     renderTableMulti();
     return;
   }
-  const q = $('#q').value.trim().toLowerCase(), fc = $('#f-ctry').value, fo = $('#f-cont').value;
+  const q = $('#q').value.trim().toLowerCase(), fc = $('#f-ctry').value, fo = $('#f-cont').value, ft = ($('#f-tier') || {}).value || '';
   if (!keepCap) tableCap = 100;
   let rows = P.filter(p =>
     (!q || p.name_cn.toLowerCase().includes(q) || (p.name_en || '').toLowerCase().includes(q)) &&
-    (!fc || p.country === fc) && (!fo || p.continent === fo));
+    (!fc || p.country === fc) && (!fo || p.continent === fo) && (!ft || tierOf(p.name_en || p.name_cn) === ft));
   const key = {
     rank: p => p.rank ?? 99999, chg: p => -(p.rank_change || 0), name: p => p.name_cn,
     ctry: p => cname(p), pts: p => -(p.points || 0), ev: p => -(p.events || 0),
@@ -4433,6 +4434,14 @@ function tierOf(name) {
   const k = String(name || '').toLowerCase().replace(/[^a-z]/g, '');
   return t[k] || null;
 }
+
+function tierChip(name) {
+  const lv = tierOf(name);
+  if (!lv) return '';
+  return '<span class="tier-chip" style="margin-left:8px;padding:2px 8px;border-radius:999px;'
+    + 'font-size:10px;font-weight:600;border:1px solid;white-space:nowrap;'
+    + (TIER_STYLE[lv] || '') + '">' + lv + '</span>';
+}
 function injectTierBadge() {
   const host = document.getElementById('p-body');
   if (!host) return;
@@ -4672,6 +4681,7 @@ function init() {
   $('#q').oninput = renderTable;
   $('#f-ctry').onchange = renderTable;
   $('#f-cont').onchange = renderTable;
+  if ($('#f-tier')) $('#f-tier').onchange = renderTable;
   $('#f-sort').onchange = renderTable;
   $('#t-n').onchange = renderTrend;
   $('#t-metric').onchange = renderTrend;
