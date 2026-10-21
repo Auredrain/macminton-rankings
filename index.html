@@ -809,6 +809,22 @@ button.more:hover{background:var(--bg-alt);border-color:var(--blue)}
 .pred-row .bar{height:6px;border-radius:999px;background:var(--bg-alt);overflow:hidden}
 .pred-row .bar i{display:block;height:100%;background:var(--blue);border-radius:999px}
 .pred-row .v{text-align:right;color:var(--tx-3);font-variant-numeric:tabular-nums}
+.sb-form{display:flex;flex-direction:column;gap:10px;margin:6px 0 4px}
+.sb-form input,.sb-form textarea{width:100%;padding:11px 14px;border-radius:12px;
+  border:1px solid var(--card-line);background:var(--bg-alt);font:inherit;font-size:14px;
+  color:var(--tx);outline:none;resize:vertical}
+.sb-form input:focus,.sb-form textarea:focus{border-color:var(--blue);
+  box-shadow:0 0 0 3px rgba(0,113,227,.12)}
+.sb-foot{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sb-msg{font-size:12px;color:var(--tx-3)}
+.sb-list{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+.sb-item{padding:12px 14px;border-radius:12px;background:var(--bg-alt)}
+.sb-top{display:flex;justify-content:space-between;gap:10px;font-size:12px;margin-bottom:6px}
+.sb-top b{color:var(--tx);font-weight:600}
+.sb-top span{color:var(--tx-3)}
+.sb-text{font-size:13px;color:var(--tx-2);line-height:1.65;white-space:pre-wrap;word-break:break-word}
+.sb-empty{font-size:13px;color:var(--tx-3);text-align:center;padding:18px 0}
+.btn.sm{padding:9px 22px;font-size:13px}
 .sp-ev{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;
   border-bottom:1px solid var(--line);padding-bottom:14px}
 .sp-ev button{
@@ -4289,6 +4305,105 @@ function renderPredict() {
   window.__drawPred = drawPred;
   drawPred();
 }
+
+
+/* ===== 共享留言（Supabase） ===== */
+const SB_COMMENTS = {
+  url: 'https://eevnhguktzdaxdsmvwgx.supabase.co',
+  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldm5oZ3VrdHpkYXhkc212d2d4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1MzYyNDUsImV4cCI6MjEwODExMjI0NX0.Qqn5PJcA_qYfx9sd4mZwlvOxRp5SPcwI3TPfm37gK6c',
+  table: '/rest/v1/comments',
+  hdr() { return { apikey: this.key, Authorization: 'Bearer ' + this.key }; },
+};
+
+function sbMount() {
+  const view = document.getElementById('view-comments');
+  if (!view || view.querySelector('#sb-card')) return;
+  const wrap = view.querySelector('.wrap') || view;
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.id = 'sb-card';
+  card.style.marginTop = '20px';
+  card.innerHTML = `
+    <div class="card-h"><h3>共享留言</h3><span class="sub2">所有人可见 · 无需登录</span></div>
+    <div class="sb-form">
+      <input id="sb-name" maxlength="20" placeholder="昵称（最多 20 字）" autocomplete="off">
+      <textarea id="sb-body" maxlength="500" rows="3" placeholder="说点什么…（最多 500 字）"></textarea>
+      <div class="sb-foot">
+        <span id="sb-msg" class="sb-msg"></span>
+        <button id="sb-send" class="btn sm">发布</button>
+      </div>
+    </div>
+    <div id="sb-list" class="sb-list"><div class="sb-empty">加载中…</div></div>`;
+  wrap.appendChild(card);
+
+  const $n = card.querySelector('#sb-name'), $b = card.querySelector('#sb-body');
+  const $btn = card.querySelector('#sb-send'), $list = card.querySelector('#sb-list');
+  const $msg = card.querySelector('#sb-msg');
+  $n.value = localStorage.getItem('sb_name') || '';
+
+  const say = (t, ok) => { $msg.textContent = t; $msg.style.color = ok ? 'var(--blue)' : '#D14343';
+    setTimeout(() => { $msg.textContent = ''; }, 4000); };
+
+  const esc2 = x => String(x == null ? '' : x).replace(/[&<>"']/g,
+    c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  const render = rows => {
+    if (!rows.length) { $list.innerHTML = '<div class="sb-empty">还没有留言，来抢第一条</div>'; return; }
+    $list.innerHTML = rows.map(r => `
+      <div class="sb-item">
+        <div class="sb-top"><b>${esc2(r.name)}</b>
+          <span>${esc2(String(r.created_at || '').slice(0, 16).replace('T', ' '))}</span></div>
+        <div class="sb-text">${esc2(r.body)}</div>
+      </div>`).join('');
+  };
+
+  const load = async () => {
+    try {
+      const r = await fetch(`${SB_COMMENTS.url}${SB_COMMENTS.table}?select=*&order=created_at.desc&limit=100`,
+        { headers: SB_COMMENTS.hdr() });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const rows = await r.json();
+      localStorage.setItem('sb_cache', JSON.stringify(rows.slice(0, 30)));
+      render(rows);
+    } catch (e) {
+      let cache = [];
+      try { cache = JSON.parse(localStorage.getItem('sb_cache') || '[]'); } catch (_) { }
+      render(cache);
+      $list.insertAdjacentHTML('beforeend',
+        '<div class="sb-empty" style="opacity:.7">离线显示缓存留言，联网后自动更新</div>');
+    }
+  };
+
+  $btn.onclick = async () => {
+    const name = $n.value.trim(), body = $b.value.trim();
+    if (!name) return say('请填写昵称');
+    if (!body) return say('请输入内容');
+    const last = +(localStorage.getItem('sb_last') || 0);
+    if (Date.now() - last < 30000) return say('请 30 秒后再发一条');
+    $btn.disabled = true; $btn.textContent = '发布中…';
+    try {
+      const r = await fetch(SB_COMMENTS.url + SB_COMMENTS.table, {
+        method: 'POST',
+        headers: { ...SB_COMMENTS.hdr(), 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ name, body }),
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      localStorage.setItem('sb_last', String(Date.now()));
+      localStorage.setItem('sb_name', name);
+      $b.value = ''; say('已发布', true);
+      await load();
+    } catch (e) {
+      say('发布失败：' + e.message + '（网络被拦截时无法发送）');
+    } finally {
+      $btn.disabled = false; $btn.textContent = '发布';
+    }
+  };
+
+  load();
+}
+
+document.addEventListener('DOMContentLoaded', sbMount);
+setTimeout(sbMount, 1200);
 
 /* ============================ 路由 ============================ */
 const SUB = {
