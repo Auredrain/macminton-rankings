@@ -4327,7 +4327,7 @@ function cbReady() {
     };
     if (window.cloudbase) return done();
     const sc = document.createElement('script');
-    sc.src = 'https://static.cloudbase.net/cloudbase-js-sdk/2.10.1/cloudbase.full.js';
+    sc.src = 'https://static.cloudbase.net/cloudbase-js-sdk/2.17.5/cloudbase.full.js';
     sc.onload = done;
     sc.onerror = () => reject(new Error('SDK 加载失败'));
     document.head.appendChild(sc);
