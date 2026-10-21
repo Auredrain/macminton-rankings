@@ -4309,16 +4309,13 @@ function renderPredict() {
 
 /* ===== 共享留言（腾讯云 CloudBase PostgREST） ===== */
 const CB = {
-  base: 'https://badminton-comments-d6c0m9e20ccb9.api.tcloudbasegateway.com/v1/rdb/rest/comments',
+  base: 'https://badminton-comments-d6c0m9e20ccb9-1511914247.ap-shanghai.app.tcloudbase.com/comments',
   key: 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjA4ZDliNTQ0LTg2NWUtNDEwOC1iODY5LTExZTBlYmMzZWExNSJ9.eyJpc3MiOiJodHRwczovL2JhZG1pbnRvbi1jb21tZW50cy1kNmMwbTllMjBjY2I5LmFwLXNoYW5naGFpLnRjYi1hcGkudGVuY2VudGNsb3VkYXBpLmNvbSIsInN1YiI6ImFub24iLCJhdWQiOiJiYWRtaW50b24tY29tbWVudHMtZDZjMG05ZTIwY2NiOSIsImV4cCI6NDA5NjI0MTA1MiwiaWF0IjoxNzkyNTU3ODUyLCJub25jZSI6IlNkVWNtOTB1UmlTWTdNNUNBbzYzTEEiLCJhdF9oYXNoIjoiU2RVY205MHVSaVNZN001Q0FvNjNMQSIsIm5hbWUiOiJBbm9ueW1vdXMiLCJzY29wZSI6ImFub255bW91cyIsInByb2plY3RfaWQiOiJiYWRtaW50b24tY29tbWVudHMtZDZjMG05ZTIwY2NiOSIsIm1ldGEiOnsicGxhdGZvcm0iOiJQdWJsaXNoYWJsZUtleSJ9LCJyb2xlIjoiYW5vbiIsImlzX2Fub255bW91cyI6dHJ1ZSwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiYW5vbnltb3VzIiwicHJvdmlkZXJzIjpbImFub255bW91cyJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiQW5vbnltb3VzIn0sInVzZXJfdHlwZSI6IiIsImNsaWVudF90eXBlIjoiY2xpZW50X3VzZXIiLCJpc19zeXN0ZW1fYWRtaW4iOmZhbHNlfQ.DBnAJcBopu6oblbv5C8ukikPgN32ufnFjtFVoxQ7cc0O1C9xwRj9S5aff-XrP_LClmbcclhTsNWBUPz3okJ2GcFDlR74XVXjUtpZmoddEmrBHIScqPOKaYtz80plYum_C5OjsHpz4NN_KLtHHkSyvkyBL6MywP3t5i8WO9jPgGxxvd_KoqgqIQGxUBSsxBCWL73N-q9XUKxTKMGQgmzgU9xFLv2F7Z2pU4SWauYGtSHtquMzkD2sRAzAkijFxOZslpwQKQmKdCQ5nswHS7Avo73n7Rz1vrmEB9RhgMzwMdp5sDPiWk6LJgloT6rYPbDBB00acjhLyKKIBToAjopzwQ',
-  hdr() {
-    return { 'Authorization': 'Bearer ' + this.key, 'Content-Type': 'application/json' };
-  },
+  hdr() { return { 'Content-Type': 'application/json' }; },
 };
 
 async function cbSelect() {
-  const r = await fetch(CB.base + '?select=*&order=created_at.desc&limit=200',
-    { headers: CB.hdr() });
+  const r = await fetch(CB.base, { headers: CB.hdr() });
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return await r.json();
 }
