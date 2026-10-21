@@ -4307,13 +4307,33 @@ function renderPredict() {
 }
 
 
-/* ===== 共享留言（Supabase） ===== */
-const SB_COMMENTS = {
-  url: 'https://eevnhguktzdaxdsmvwgx.supabase.co',
-  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVldm5oZ3VrdHpkYXhkc212d2d4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1MzYyNDUsImV4cCI6MjEwODExMjI0NX0.Qqn5PJcA_qYfx9sd4mZwlvOxRp5SPcwI3TPfm37gK6c',
-  table: '/rest/v1/comments',
-  hdr() { return { apikey: this.key, Authorization: 'Bearer ' + this.key }; },
+/* ===== 共享留言（腾讯云 CloudBase） ===== */
+const CB = {
+  env: 'badminton-comments-d6c0m9e20ccb9',
+  region: 'ap-shanghai',
+  key: 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjA4ZDliNTQ0LTg2NWUtNDEwOC1iODY5LTExZTBlYmMzZWExNSJ9.eyJpc3MiOiJodHRwczovL2JhZG1pbnRvbi1jb21tZW50cy1kNmMwbTllMjBjY2I5LmFwLXNoYW5naGFpLnRjYi1hcGkudGVuY2VudGNsb3VkYXBpLmNvbSIsInN1YiI6ImFub24iLCJhdWQiOiJiYWRtaW50b24tY29tbWVudHMtZDZjMG05ZTIwY2NiOSIsImV4cCI6NDA5NjI0MTA1MiwiaWF0IjoxNzkyNTU3ODUyLCJub25jZSI6IlNkVWNtOTB1UmlTWTdNNUNBbzYzTEEiLCJhdF9oYXNoIjoiU2RVY205MHVSaVNZN001Q0FvNjNMQSIsIm5hbWUiOiJBbm9ueW1vdXMiLCJzY29wZSI6ImFub255bW91cyIsInByb2plY3RfaWQiOiJiYWRtaW50b24tY29tbWVudHMtZDZjMG05ZTIwY2NiOSIsIm1ldGEiOnsicGxhdGZvcm0iOiJQdWJsaXNoYWJsZUtleSJ9LCJyb2xlIjoiYW5vbiIsImlzX2Fub255bW91cyI6dHJ1ZSwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiYW5vbnltb3VzIiwicHJvdmlkZXJzIjpbImFub255bW91cyJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiQW5vbnltb3VzIn0sInVzZXJfdHlwZSI6IiIsImNsaWVudF90eXBlIjoiY2xpZW50X3VzZXIiLCJpc19zeXN0ZW1fYWRtaW4iOmZhbHNlfQ.DBnAJcBopu6oblbv5C8ukikPgN32ufnFjtFVoxQ7cc0O1C9xwRj9S5aff-XrP_LClmbcclhTsNWBUPz3okJ2GcFDlR74XVXjUtpZmoddEmrBHIScqPOKaYtz80plYum_C5OjsHpz4NN_KLtHHkSyvkyBL6MywP3t5i8WO9jPgGxxvd_KoqgqIQGxUBSsxBCWL73N-q9XUKxTKMGQgmzgU9xFLv2F7Z2pU4SWauYGtSHtquMzkD2sRAzAkijFxOZslpwQKQmKdCQ5nswHS7Avo73n7Rz1vrmEB9RhgMzwMdp5sDPiWk6LJgloT6rYPbDBB00acjhLyKKIBToAjopzwQ',
+  _app: null,
 };
+
+function cbReady() {
+  if (CB._app) return Promise.resolve(CB._app);
+  if (window.__cbLoading) return window.__cbLoading;
+  window.__cbLoading = new Promise((resolve, reject) => {
+    const done = () => {
+      try {
+        CB._app = cloudbase.init({ env: CB.env, region: CB.region, accessKey: CB.key });
+        resolve(CB._app);
+      } catch (e) { reject(e); }
+    };
+    if (window.cloudbase) return done();
+    const sc = document.createElement('script');
+    sc.src = 'https://static.cloudbase.net/cloudbase-js-sdk/2.10.1/cloudbase.full.js';
+    sc.onload = done;
+    sc.onerror = () => reject(new Error('SDK 加载失败'));
+    document.head.appendChild(sc);
+  });
+  return window.__cbLoading;
+}
 
 function sbMount() {
   const view = document.getElementById('view-comments');
@@ -4341,9 +4361,10 @@ function sbMount() {
   const $msg = card.querySelector('#sb-msg');
   $n.value = localStorage.getItem('sb_name') || '';
 
-  const say = (t, ok) => { $msg.textContent = t; $msg.style.color = ok ? 'var(--blue)' : '#D14343';
-    setTimeout(() => { $msg.textContent = ''; }, 4000); };
-
+  const say = (t, ok) => {
+    $msg.textContent = t; $msg.style.color = ok ? 'var(--blue)' : '#D14343';
+    setTimeout(() => { $msg.textContent = ''; }, 4000);
+  };
   const esc2 = x => String(x == null ? '' : x).replace(/[&<>"']/g,
     c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -4359,10 +4380,11 @@ function sbMount() {
 
   const load = async () => {
     try {
-      const r = await fetch(`${SB_COMMENTS.url}${SB_COMMENTS.table}?select=*&order=created_at.desc&limit=100`,
-        { headers: SB_COMMENTS.hdr() });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      const rows = await r.json();
+      const app = await cbReady();
+      const { data, error } = await app.rdb().from('comments').select('*').limit(200);
+      if (error) throw new Error(error.message || '查询失败');
+      const rows = (data || []).slice().sort((a, b) =>
+        String(b.created_at || '').localeCompare(String(a.created_at || '')));
       localStorage.setItem('sb_cache', JSON.stringify(rows.slice(0, 30)));
       render(rows);
     } catch (e) {
@@ -4370,7 +4392,7 @@ function sbMount() {
       try { cache = JSON.parse(localStorage.getItem('sb_cache') || '[]'); } catch (_) { }
       render(cache);
       $list.insertAdjacentHTML('beforeend',
-        '<div class="sb-empty" style="opacity:.7">离线显示缓存留言，联网后自动更新</div>');
+        '<div class="sb-empty" style="opacity:.7">离线显示缓存留言（' + esc2(e.message) + '）</div>');
     }
   };
 
@@ -4382,18 +4404,15 @@ function sbMount() {
     if (Date.now() - last < 30000) return say('请 30 秒后再发一条');
     $btn.disabled = true; $btn.textContent = '发布中…';
     try {
-      const r = await fetch(SB_COMMENTS.url + SB_COMMENTS.table, {
-        method: 'POST',
-        headers: { ...SB_COMMENTS.hdr(), 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify({ name, body }),
-      });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const app = await cbReady();
+      const { error } = await app.rdb().from('comments').insert({ name, body });
+      if (error) throw new Error(error.message || '写入失败');
       localStorage.setItem('sb_last', String(Date.now()));
       localStorage.setItem('sb_name', name);
       $b.value = ''; say('已发布', true);
       await load();
     } catch (e) {
-      say('发布失败：' + e.message + '（网络被拦截时无法发送）');
+      say('发布失败：' + e.message);
     } finally {
       $btn.disabled = false; $btn.textContent = '发布';
     }
